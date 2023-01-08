@@ -96,6 +96,9 @@ namespace SDDM {
         // set process environment
         QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
         env.insert(QStringLiteral("XCURSOR_THEME"), mainConfig.Theme.CursorTheme.get());
+        QString xcursorSize = mainConfig.Theme.CursorSize.get();
+        if (!xcursorSize.isEmpty())
+            env.insert(QStringLiteral("XCURSOR_SIZE"), xcursorSize);
         process->setProcessEnvironment(env);
 
         //create pipe for communicating with X server
@@ -199,8 +202,10 @@ namespace SDDM {
         process->terminate();
 
         // wait for finished
-        if (!process->waitForFinished(5000))
+        if (!process->waitForFinished(5000)) {
             process->kill();
+            process->waitForFinished(25000);
+        }
     }
 
     void XorgDisplayServer::finished() {

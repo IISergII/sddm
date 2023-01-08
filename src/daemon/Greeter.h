@@ -44,6 +44,7 @@ namespace SDDM {
 
         QString displayServerCommand() const;
         void setDisplayServerCommand(const QString &cmd);
+        bool isRunning() const;
 
     public slots:
         bool start();
@@ -62,6 +63,7 @@ namespace SDDM {
 
     signals:
         void failed();
+        void displayServerFailed();
 
     private:
         bool m_started { false };

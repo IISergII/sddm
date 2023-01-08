@@ -30,14 +30,16 @@ namespace SDDM {
         Reboot,
         Suspend,
         Hibernate,
-        HybridSleep
+        HybridSleep,
+        KeyboardLayout,
     };
 
     enum class DaemonMessages {
         HostName,
         Capabilities,
         LoginSucceeded,
-        LoginFailed
+        LoginFailed,
+        InformationMessage,
     };
 
     enum Capability {

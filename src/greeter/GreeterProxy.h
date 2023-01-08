@@ -61,6 +61,7 @@ namespace SDDM {
         void suspend();
         void hibernate();
         void hybridSleep();
+        void sendKeyboardLayout(const QString &layout);
 
         void login(const QString &user, const QString &password, const int sessionIndex) const;
 
@@ -71,6 +72,7 @@ namespace SDDM {
         void error();
 
     signals:
+        void informationMessage(const QString &message);
         void hostNameChanged(const QString &hostName);
         void canPowerOffChanged(bool canPowerOff);
         void canRebootChanged(bool canReboot);
@@ -78,6 +80,7 @@ namespace SDDM {
         void canHibernateChanged(bool canHibernate);
         void canHybridSleepChanged(bool canHybridSleep);
 
+        void socketDisconnected();
         void loginFailed();
         void loginSucceeded();
 

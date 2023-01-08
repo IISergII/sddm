@@ -52,8 +52,8 @@ namespace SDDM {
             , m_session(new UserSession(this))
             , m_socket(new QLocalSocket(this)) {
         qInstallMessageHandler(HelperMessageHandler);
-        SDDM::SignalHandler s;
-        QObject::connect(&s, &SDDM::SignalHandler::sigtermReceived, QCoreApplication::instance(), [] {
+        SignalHandler *s = new SignalHandler(this);
+        QObject::connect(s, &SignalHandler::sigtermReceived, m_session, [] {
             QCoreApplication::instance()->exit(-1);
         });
 

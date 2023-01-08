@@ -64,21 +64,26 @@ namespace SDDM {
             qInfo() << "Starting X11 session:" << m_displayServerCmd << command;
             if (m_displayServerCmd.isEmpty()) {
                 auto args = QProcess::splitCommand(command);
-                const auto program = args.takeFirst();
-                QProcess::start(program, args);
+                setProgram(args.takeFirst());
+                setArguments(args);
             } else {
-                QProcess::start(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-x11user"), {m_displayServerCmd, command});
+                setProgram(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-x11user"));
+                setArguments({m_displayServerCmd, command});
             }
+            QProcess::start();
 
         } else if (env.value(QStringLiteral("XDG_SESSION_TYPE")) == QLatin1String("wayland")) {
             if (env.value(QStringLiteral("XDG_SESSION_CLASS")) == QLatin1String("greeter")) {
                 Q_ASSERT(!m_displayServerCmd.isEmpty());
-                QProcess::start(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-wayland"), {m_displayServerCmd, m_path});
+                setProgram(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-wayland"));
+                setArguments({m_displayServerCmd, m_path});
+                QProcess::start();
                 isWaylandGreeter = true;
             } else {
-                const QString cmd = QStringLiteral("%1 %2").arg(mainConfig.Wayland.SessionCommand.get()).arg(m_path);
-                qInfo() << "Starting Wayland user session:" << cmd;
-                QProcess::start(mainConfig.Wayland.SessionCommand.get(), QStringList{m_path});
+                setProgram(mainConfig.Wayland.SessionCommand.get());
+                setArguments(QStringList{m_path});
+                qInfo() << "Starting Wayland user session:" << program() << m_path;
+                QProcess::start();
                 closeWriteChannel();
                 closeReadChannel(QProcess::StandardOutput);
             }
@@ -111,8 +116,9 @@ namespace SDDM {
                     qWarning() << "Could not fully finish the process" << program();
                 }
             }
+        } else {
+            Q_EMIT finished(Auth::HELPER_OTHER_ERROR);
         }
-        Q_EMIT finished(Auth::HELPER_OTHER_ERROR);
     }
 
     QString UserSession::displayServerCommand() const
@@ -206,8 +212,10 @@ namespace SDDM {
         if (bufsize == -1)
             bufsize = 16384;
         QScopedPointer<char, QScopedPointerPodDeleter> buffer(static_cast<char*>(malloc(bufsize)));
-        if (buffer.isNull())
+        if (buffer.isNull()) {
+            qCritical() << "Could not allocate buffer of size" << bufsize;
             exit(Auth::HELPER_OTHER_ERROR);
+        }
         int err = getpwnam_r(username.constData(), &pw, buffer.data(), bufsize, &rpw);
         if (rpw == NULL) {
             if (err == 0)
@@ -316,10 +324,25 @@ namespace SDDM {
             QFileInfo finfo(sessionLog);
             QDir().mkpath(finfo.absolutePath());
 
-            setStandardErrorFile(sessionLog);
-            setStandardOutputFile(QProcess::nullDevice());
-        } else {
-            setProcessChannelMode(QProcess::ForwardedChannels);
+            //swap the stderr pipe of this subprcess into a file
+            int fd = ::open(qPrintable(sessionLog), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            if (fd >= 0)
+            {
+                dup2 (fd, STDERR_FILENO);
+                ::close(fd);
+            } else {
+                qWarning() << "Could not open stderr to" << sessionLog;
+            }
+
+            //redirect any stdout to /dev/null
+            fd = ::open("/dev/null", O_WRONLY);
+            if (fd >= 0)
+            {
+                dup2 (fd, STDOUT_FILENO);
+                ::close(fd);
+            } else {
+                qWarning() << "Could not redirect stdout";
+            }
         }
 
         // set X authority for X11 sessions only

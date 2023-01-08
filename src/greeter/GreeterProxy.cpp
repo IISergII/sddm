@@ -108,6 +108,10 @@ namespace SDDM {
         SocketWriter(d->socket) << quint32(GreeterMessages::HybridSleep);
     }
 
+    void GreeterProxy::sendKeyboardLayout(const QString &layout) {
+        SocketWriter(d->socket) << quint32(GreeterMessages::KeyboardLayout) << layout;
+    }
+
     void GreeterProxy::login(const QString &user, const QString &password, const int sessionIndex) const {
         if (!d->sessionModel) {
             // log error
@@ -138,6 +142,8 @@ namespace SDDM {
     void GreeterProxy::disconnected() {
         // log disconnection
         qDebug() << "Disconnected from the daemon.";
+
+        Q_EMIT socketDisconnected();
     }
 
     void GreeterProxy::error() {
@@ -202,6 +208,13 @@ namespace SDDM {
 
                     // emit signal
                     emit loginFailed();
+                }
+                case DaemonMessages::InformationMessage: {
+                    QString message;
+                    input >> message;
+
+                    qDebug() << "Information Message received from daemon: " << message;
+                    emit informationMessage(message);
                 }
                 break;
                 default: {
